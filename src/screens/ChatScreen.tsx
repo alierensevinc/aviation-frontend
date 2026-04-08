@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Text,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
@@ -15,6 +16,7 @@ import { Send, Plane, Menu } from "lucide-react-native";
 import { COLORS } from "../theme/colors";
 import { ChatBubble } from "../components/ChatBubble";
 import { SkeletonBubble } from "../components/SkeletonBubble";
+import { WelcomeView } from "../components/WelcomeView";
 import { useChatStore } from "../store/useChatStore";
 import { streamChat } from "../api/chatService";
 import { useNavigation } from "@react-navigation/native";
@@ -35,26 +37,24 @@ export const ChatScreen = () => {
   const flashListRef = useRef<FlashList<any>>(null);
   const navigation = useNavigation<any>();
 
-  const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
+  const handleSend = async (customText?: string) => {
+    const messageToSend = customText || input.trim();
+    if (!messageToSend || isStreaming) return;
 
-    const userMessage = input.trim();
     setInput("");
-    addMessage("user", userMessage);
+    addMessage("user", messageToSend);
 
     setStreaming(true);
-    // Artık '...' eklemiyoruz, Skeleton'u isStreaming ve son mesajın modelden olup olmamasına göre göstereceğiz.
     addMessage("model", "");
 
     try {
-      await streamChat(userMessage, messages, (fullText) => {
-        // Her güncellemede LayoutAnimation kullanarak daha akıcı bir geçiş sağlayabilirsin
-        // if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      // Mesajları güncel haliyle almak için messages dizisini buradan hesaplayalım
+      await streamChat(messageToSend, messages, (fullText) => {
         updateLastMessage(fullText);
         flashListRef.current?.scrollToEnd({ animated: true });
       });
-    } catch (error) {
-      updateLastMessage("Üzgünüm, bir hata oluştu.");
+    } catch (error: any) {
+      updateLastMessage(error.message || "Üzgünüm, bir hata oluştu.");
     } finally {
       setStreaming(false);
     }
@@ -78,26 +78,32 @@ export const ChatScreen = () => {
         keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
         <View style={styles.listContainer}>
-          <FlashList
-            ref={flashListRef}
-            data={messages}
-            renderItem={({ item, index }) => {
-              if (
-                item.role === "model" &&
-                item.parts[0].text === "" &&
-                isStreaming &&
-                index === messages.length - 1
-              ) {
-                return <SkeletonBubble />;
+          {messages.length === 0 ? (
+            <WelcomeView onSuggestionPress={(text) => handleSend(text)} />
+          ) : (
+            <FlashList
+              ref={flashListRef}
+              data={messages}
+              renderItem={({ item, index }) => {
+                if (
+                  item.role === "model" &&
+                  item.parts[0].text === "" &&
+                  isStreaming &&
+                  index === messages.length - 1
+                ) {
+                  return <SkeletonBubble />;
+                }
+                return (
+                  <ChatBubble role={item.role} text={item.parts[0].text} />
+                );
+              }}
+              estimatedItemSize={100}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              onContentSizeChange={() =>
+                flashListRef.current?.scrollToEnd({ animated: true })
               }
-              return <ChatBubble role={item.role} text={item.parts[0].text} />;
-            }}
-            estimatedItemSize={100}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            onContentSizeChange={() =>
-              flashListRef.current?.scrollToEnd({ animated: true })
-            }
-          />
+            />
+          )}
         </View>
 
         {/* Input Alanı */}
@@ -159,7 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: "#E1E8ED",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 8,
   },
   input: {

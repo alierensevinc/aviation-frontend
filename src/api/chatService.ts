@@ -15,7 +15,13 @@ export const streamChat = async (
     body: JSON.stringify({ message, history }),
   });
 
-  if (!response.ok) throw new Error("API Hatası");
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("Lütfen biraz yavaşla. Çok fazla istek attın, biraz bekleyip tekrar dene.");
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Uçuş kulesiyle bağlantı kurulamadı.");
+  }
 
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
@@ -27,6 +33,6 @@ export const streamChat = async (
 
     const chunk = decoder.decode(value);
     fullText += chunk;
-    onChunk(fullText); // Her kelime geldiğinde UI'ı tetikle
+    onChunk(fullText);
   }
 };

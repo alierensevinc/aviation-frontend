@@ -1,11 +1,18 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useChatStore } from '../store/useChatStore';
-import { COLORS } from '../theme/colors';
-import { PlusCircle, MessageSquare } from 'lucide-react-native';
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import { useChatStore } from "../store/useChatStore";
+import { COLORS } from "../theme/colors";
+import { PlusCircle, MessageSquare } from "lucide-react-native";
 
 export const Sidebar = ({ navigation }: any) => {
-  const { threads, activeThreadId, createNewThread, switchThread } = useChatStore();
+  const { threads, activeThreadId, createNewThread, switchThread } =
+    useChatStore();
 
   const handleNewChat = () => {
     createNewThread();
@@ -33,7 +40,10 @@ export const Sidebar = ({ navigation }: any) => {
               style={[styles.threadItem, isActive && styles.activeThreadItem]}
               onPress={() => handleSelectThread(thread.id)}
             >
-              <MessageSquare color={isActive ? COLORS.primary : COLORS.text} size={18} />
+              <MessageSquare
+                color={isActive ? COLORS.primary : COLORS.text}
+                size={18}
+              />
               <Text
                 style={[styles.threadText, isActive && styles.activeThreadText]}
                 numberOfLines={1}
@@ -56,8 +66,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   newChatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.secondary,
     padding: 12,
     borderRadius: 8,
@@ -66,15 +76,15 @@ const styles = StyleSheet.create({
   },
   newChatText: {
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 16,
   },
   threadList: {
     flex: 1,
   },
   threadItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -82,7 +92,7 @@ const styles = StyleSheet.create({
   },
   activeThreadItem: {
     backgroundColor: COLORS.white,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
@@ -95,6 +105,6 @@ const styles = StyleSheet.create({
   },
   activeThreadText: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
