@@ -1,5 +1,5 @@
 const API_URL = "https://aviation-backend-rho.vercel.app/api/chat";
-const APP_SECRET = "backend-ile-ayni-key";
+const APP_SECRET = process.env.EXPO_PUBLIC_APP_VARIANT_SECRET;
 
 export const streamChat = async (
   message: string,

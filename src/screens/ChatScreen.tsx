@@ -14,17 +14,24 @@ import { FlashList } from "@shopify/flash-list";
 import { Send, Plane, Menu } from "lucide-react-native";
 import { COLORS } from "../theme/colors";
 import { ChatBubble } from "../components/ChatBubble";
+import { SkeletonBubble } from "../components/SkeletonBubble";
 import { useChatStore } from "../store/useChatStore";
 import { streamChat } from "../api/chatService";
 import { useNavigation } from "@react-navigation/native";
 
 export const ChatScreen = () => {
   const [input, setInput] = useState("");
-  const { threads, activeThreadId, addMessage, updateLastMessage, isStreaming, setStreaming } =
-    useChatStore();
-  
+  const {
+    threads,
+    activeThreadId,
+    addMessage,
+    updateLastMessage,
+    isStreaming,
+    setStreaming,
+  } = useChatStore();
+
   const messages = threads.find((t) => t.id === activeThreadId)?.messages || [];
-  
+
   const flashListRef = useRef<FlashList<any>>(null);
   const navigation = useNavigation<any>();
 
@@ -35,20 +42,19 @@ export const ChatScreen = () => {
     setInput("");
     addMessage("user", userMessage);
 
-    // AI için boş bir mesaj baloncuğu oluştur
-    addMessage("model", "...");
     setStreaming(true);
+    // Artık '...' eklemiyoruz, Skeleton'u isStreaming ve son mesajın modelden olup olmamasına göre göstereceğiz.
+    addMessage("model", "");
 
     try {
-      // Backend'e son 5 mesajı geçmiş olarak gönderiyoruz (Store'dan alarak)
       await streamChat(userMessage, messages, (fullText) => {
+        // Her güncellemede LayoutAnimation kullanarak daha akıcı bir geçiş sağlayabilirsin
+        // if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         updateLastMessage(fullText);
         flashListRef.current?.scrollToEnd({ animated: true });
       });
     } catch (error) {
-      updateLastMessage(
-        "Üzgünüm, uçuş kulesiyle bağlantı koptu. Lütfen tekrar dene.",
-      );
+      updateLastMessage("Üzgünüm, bir hata oluştu.");
     } finally {
       setStreaming(false);
     }
@@ -75,9 +81,17 @@ export const ChatScreen = () => {
           <FlashList
             ref={flashListRef}
             data={messages}
-            renderItem={({ item }) => (
-              <ChatBubble role={item.role} text={item.parts[0].text} />
-            )}
+            renderItem={({ item, index }) => {
+              if (
+                item.role === "model" &&
+                item.parts[0].text === "" &&
+                isStreaming &&
+                index === messages.length - 1
+              ) {
+                return <SkeletonBubble />;
+              }
+              return <ChatBubble role={item.role} text={item.parts[0].text} />;
+            }}
             estimatedItemSize={100}
             contentContainerStyle={{ paddingBottom: 20 }}
             onContentSizeChange={() =>
