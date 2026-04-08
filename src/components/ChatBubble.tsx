@@ -8,7 +8,7 @@ interface Props {
   text: string;
 }
 
-export const ChatBubble = ({ role, text }: Props) => {
+export const ChatBubble = React.memo(({ role, text }: Props) => {
   const isUser = role === "user";
 
   return (
@@ -24,7 +24,7 @@ export const ChatBubble = ({ role, text }: Props) => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: { marginVertical: 8, paddingHorizontal: 12 },

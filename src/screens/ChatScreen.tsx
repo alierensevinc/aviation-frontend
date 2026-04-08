@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -60,6 +60,22 @@ export const ChatScreen = () => {
     }
   };
 
+  const renderItem = useCallback(({ item, index }: any) => {
+    if (
+      item.role === "model" &&
+      item.parts[0].text === "" &&
+      isStreaming &&
+      index === messages.length - 1
+    ) {
+      return <SkeletonBubble />;
+    }
+    return <ChatBubble role={item.role} text={item.parts[0].text} />;
+  }, [isStreaming, messages.length]);
+
+  const onContentSizeChange = useCallback(() => {
+    flashListRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
@@ -84,24 +100,10 @@ export const ChatScreen = () => {
             <FlashList
               ref={flashListRef}
               data={messages}
-              renderItem={({ item, index }) => {
-                if (
-                  item.role === "model" &&
-                  item.parts[0].text === "" &&
-                  isStreaming &&
-                  index === messages.length - 1
-                ) {
-                  return <SkeletonBubble />;
-                }
-                return (
-                  <ChatBubble role={item.role} text={item.parts[0].text} />
-                );
-              }}
+              renderItem={renderItem}
               estimatedItemSize={100}
               contentContainerStyle={{ paddingBottom: 20 }}
-              onContentSizeChange={() =>
-                flashListRef.current?.scrollToEnd({ animated: true })
-              }
+              onContentSizeChange={onContentSizeChange}
             />
           )}
         </View>
@@ -131,7 +133,7 @@ export const ChatScreen = () => {
               styles.sendButton,
               (!input.trim() || isStreaming) && styles.disabledButton,
             ]}
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={!input.trim() || isStreaming}
           >
             {isStreaming ? (
