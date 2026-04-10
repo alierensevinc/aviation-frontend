@@ -1,6 +1,6 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { TouchableOpacity, Text, StyleSheet, View } from "react-native";
-import { MessageSquare, Trash2 } from "lucide-react-native";
+import { MessageSquare, Trash2, Check } from "lucide-react-native";
 import { COLORS } from "../theme/colors";
 
 export interface SidebarThreadItemProps {
@@ -13,6 +13,25 @@ export interface SidebarThreadItemProps {
 
 export const SidebarThreadItem = memo(
   ({ id, title, isActive, onPress, onDelete }: SidebarThreadItemProps) => {
+    const [confirming, setConfirming] = useState(false);
+
+    useEffect(() => {
+      let timeout: ReturnType<typeof setTimeout>;
+      if (confirming) {
+        timeout = setTimeout(() => setConfirming(false), 3000);
+      }
+      return () => clearTimeout(timeout);
+    }, [confirming]);
+
+    const handleDeletePress = () => {
+      if (confirming) {
+        onDelete(id);
+        setConfirming(false);
+      } else {
+        setConfirming(true);
+      }
+    };
+
     return (
       <View style={[styles.threadItemContainer, isActive && styles.activeThreadItem]}>
         <TouchableOpacity
@@ -32,11 +51,15 @@ export const SidebarThreadItem = memo(
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => onDelete(id)}
+          style={[styles.deleteButton, confirming && styles.deleteButtonConfirming]}
+          onPress={handleDeletePress}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Trash2 color={COLORS.error} size={18} />
+          {confirming ? (
+            <Check color={COLORS.white} size={18} />
+          ) : (
+            <Trash2 color={COLORS.error} size={18} />
+          )}
         </TouchableOpacity>
       </View>
     );
@@ -78,5 +101,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 12,
+    borderRadius: 8,
+  },
+  deleteButtonConfirming: {
+    backgroundColor: COLORS.error,
   },
 });

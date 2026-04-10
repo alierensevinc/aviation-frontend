@@ -37,23 +37,12 @@ export const Sidebar = ({ navigation }: SidebarProps) => {
     [switchThread, navigation],
   );
 
-  const handleDeleteThread = useCallback((id: string) => {
-    if (Platform.OS === 'web') {
-      const isConfirmed = window.confirm("Bu sohbeti tamamen silmek istediğine emin misin?");
-      if (isConfirmed) {
-        deleteThread(id);
-      }
-    } else {
-      Alert.alert(
-        "Sohbeti Sil",
-        "Bu sohbeti tamamen silmek istediğine emin misin?",
-        [
-          { text: "Vazgeç", style: "cancel" },
-          { text: "Sil", style: "destructive", onPress: () => deleteThread(id) }
-        ]
-      );
-    }
-  }, [deleteThread]);
+  const handleDeleteThread = useCallback(
+    (id: string) => {
+      deleteThread(id);
+    },
+    [deleteThread],
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top || 50 }]}>
