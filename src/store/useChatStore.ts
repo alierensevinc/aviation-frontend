@@ -20,6 +20,7 @@ export interface ChatState {
 
   createNewThread: () => void;
   switchThread: (id: string) => void;
+  deleteThread: (id: string) => void;
   addMessage: (role: "user" | "model", text: string) => void;
   updateLastMessage: (text: string) => void;
   setStreaming: (status: boolean) => void;
@@ -47,6 +48,19 @@ export const useChatStore = create<ChatState>()(
 
       switchThread: (id) => {
         set({ activeThreadId: id });
+      },
+
+      deleteThread: (id) => {
+        set((state) => {
+          const newThreads = state.threads.filter((t) => t.id !== id);
+          let newActiveId = state.activeThreadId;
+
+          if (newActiveId === id) {
+            newActiveId = newThreads.length > 0 ? newThreads[0].id : null;
+          }
+
+          return { threads: newThreads, activeThreadId: newActiveId };
+        });
       },
 
       addMessage: (role, text) =>

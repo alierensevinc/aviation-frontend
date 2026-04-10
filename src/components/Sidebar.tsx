@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useChatStore } from "../store/useChatStore";
@@ -18,7 +20,7 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ navigation }: SidebarProps) => {
-  const { threads, activeThreadId, createNewThread, switchThread } =
+  const { threads, activeThreadId, createNewThread, switchThread, deleteThread } =
     useChatStore();
   const insets = useSafeAreaInsets();
 
@@ -35,6 +37,24 @@ export const Sidebar = ({ navigation }: SidebarProps) => {
     [switchThread, navigation],
   );
 
+  const handleDeleteThread = useCallback((id: string) => {
+    if (Platform.OS === 'web') {
+      const isConfirmed = window.confirm("Bu sohbeti tamamen silmek istediğine emin misin?");
+      if (isConfirmed) {
+        deleteThread(id);
+      }
+    } else {
+      Alert.alert(
+        "Sohbeti Sil",
+        "Bu sohbeti tamamen silmek istediğine emin misin?",
+        [
+          { text: "Vazgeç", style: "cancel" },
+          { text: "Sil", style: "destructive", onPress: () => deleteThread(id) }
+        ]
+      );
+    }
+  }, [deleteThread]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top || 50 }]}>
       <TouchableOpacity style={styles.newChatButton} onPress={handleNewChat}>
@@ -50,6 +70,7 @@ export const Sidebar = ({ navigation }: SidebarProps) => {
             title={thread.title}
             isActive={thread.id === activeThreadId}
             onPress={handleSelectThread}
+            onDelete={handleDeleteThread}
           />
         ))}
       </ScrollView>

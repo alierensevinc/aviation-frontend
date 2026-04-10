@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { StyleSheet, View, KeyboardAvoidingView, Platform } from "react-native";
+import { StyleSheet, View, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { COLORS } from "../theme/colors";
@@ -12,6 +12,10 @@ import { useNavigation } from "@react-navigation/native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { ChatHeader } from "../components/ChatHeader";
 import { ChatInputArea } from "../components/ChatInputArea";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export const ChatScreen = () => {
   const [input, setInput] = useState("");
@@ -45,6 +49,7 @@ export const ChatScreen = () => {
         typeof customText === "string" ? customText : input.trim();
       if (!messageToSend || isStreaming) return;
 
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setInput("");
       addMessage("user", messageToSend);
 
