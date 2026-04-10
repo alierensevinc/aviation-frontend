@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export interface Message {
   role: "user" | "model";
   parts: [{ text: string }];
+  isError?: boolean;
 }
 
 export interface Thread {
@@ -23,6 +24,7 @@ export interface ChatState {
   deleteThread: (id: string) => void;
   addMessage: (role: "user" | "model", text: string) => void;
   updateLastMessage: (text: string) => void;
+  setLastMessageError: (isError: boolean) => void;
   setStreaming: (status: boolean) => void;
 }
 
@@ -98,25 +100,46 @@ export const useChatStore = create<ChatState>()(
           return { threads: newThreads, activeThreadId: currentThreadId };
         }),
 
-      updateLastMessage: (text) =>
-        set((state) => {
-          if (!state.activeThreadId) return state;
-          const newThreads = [...state.threads];
-          const threadIndex = newThreads.findIndex(
-            (t) => t.id === state.activeThreadId,
-          );
-          if (threadIndex !== -1) {
-            const thread = newThreads[threadIndex];
-            const newMessages = [...thread.messages];
-            if (newMessages.length > 0) {
-              newMessages[newMessages.length - 1].parts[0].text = text;
-            }
-            newThreads[threadIndex] = { ...thread, messages: newMessages };
-          }
-          return { threads: newThreads };
-        }),
+  updateLastMessage: (text) =>
+    set((state) => {
+      if (!state.activeThreadId) return state;
+      const newThreads = [...state.threads];
+      const threadIndex = newThreads.findIndex(
+        (t) => t.id === state.activeThreadId,
+      );
+      if (threadIndex !== -1) {
+        const thread = newThreads[threadIndex];
+        const newMessages = [...thread.messages];
+        if (newMessages.length > 0) {
+          newMessages[newMessages.length - 1].parts[0].text = text;
+        }
+        newThreads[threadIndex] = { ...thread, messages: newMessages };
+      }
+      return { threads: newThreads };
+    }),
 
-      setStreaming: (status) => set({ isStreaming: status }),
+  setLastMessageError: (isError) =>
+    set((state) => {
+      if (!state.activeThreadId) return state;
+      const newThreads = [...state.threads];
+      const threadIndex = newThreads.findIndex(
+        (t) => t.id === state.activeThreadId,
+      );
+      if (threadIndex !== -1) {
+        const thread = newThreads[threadIndex];
+        const newMessages = [...thread.messages];
+        if (newMessages.length > 0) {
+          newMessages[newMessages.length - 1] = {
+            ...newMessages[newMessages.length - 1],
+            isError,
+          };
+        }
+        newThreads[threadIndex] = { ...thread, messages: newMessages };
+      }
+      return { threads: newThreads };
+    }),
+
+  setStreaming: (status) => set({ isStreaming: status }),
     }),
     {
       name: "chat-storage",

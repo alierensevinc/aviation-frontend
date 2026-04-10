@@ -24,6 +24,7 @@ export const ChatScreen = () => {
     activeThreadId,
     addMessage,
     updateLastMessage,
+    setLastMessageError,
     isStreaming,
     setStreaming,
   } = useChatStore();
@@ -35,13 +36,24 @@ export const ChatScreen = () => {
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const previousThreadIdRef = useRef(activeThreadId);
+
   useEffect(() => {
+    if (
+      previousThreadIdRef.current !== null &&
+      previousThreadIdRef.current !== activeThreadId &&
+      abortControllerRef.current
+    ) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setStreaming(false);
+    }
+    previousThreadIdRef.current = activeThreadId;
+
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      // Sadece component unmount olduğunda cleanup yap
     };
-  }, [activeThreadId]);
+  }, [activeThreadId, setStreaming]);
 
   const handleSend = useCallback(
     async (customText?: string | any) => {
@@ -77,14 +89,55 @@ export const ChatScreen = () => {
           console.log("İstek kullanıcı tarafından iptal edildi.");
         } else {
           updateLastMessage(error.message || "Üzgünüm, bir hata oluştu.");
+          setLastMessageError(true);
         }
       } finally {
         setStreaming(false);
         abortControllerRef.current = null;
       }
     },
-    [input, isStreaming, addMessage, setStreaming, messages, updateLastMessage],
+    [input, isStreaming, addMessage, setStreaming, messages, updateLastMessage, setLastMessageError],
   );
+
+  const handleRetry = useCallback(async () => {
+    const threadMessages = useChatStore.getState().threads.find((t) => t.id === activeThreadId)?.messages || [];
+    if (threadMessages.length < 2) return;
+    
+    updateLastMessage("");
+    setLastMessageError(false);
+    
+    const previousMessages = threadMessages.slice(0, -1);
+    const lastUserMessage = threadMessages[threadMessages.length - 2].parts[0].text;
+    
+    setStreaming(true);
+    abortControllerRef.current = new AbortController();
+
+    try {
+      await streamChat(
+        lastUserMessage,
+        previousMessages,
+        (fullText) => {
+          updateLastMessage(fullText);
+          flashListRef.current?.scrollToEnd({ animated: true });
+        },
+        abortControllerRef.current.signal,
+      );
+    } catch (error: any) {
+      if (
+          error.name === "AbortError" ||
+          error.message?.includes("aborted") ||
+          error.message?.includes("iptal")
+      ) {
+         // Silently fail if manually cancelled
+      } else {
+         updateLastMessage(error.message || "Üzgünüm, bir hata oluştu.");
+         setLastMessageError(true);
+      }
+    } finally {
+      setStreaming(false);
+      abortControllerRef.current = null;
+    }
+  }, [activeThreadId, updateLastMessage, setStreaming, setLastMessageError]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -112,9 +165,16 @@ export const ChatScreen = () => {
       ) {
         return <SkeletonBubble />;
       }
-      return <ChatBubble role={item.role} text={item.parts[0].text} />;
+      return (
+        <ChatBubble 
+          role={item.role} 
+          text={item.parts[0].text} 
+          isError={item.isError}
+          onRetry={handleRetry}
+        />
+      );
     },
-    [isStreaming, messages.length],
+    [isStreaming, messages.length, handleRetry],
   );
 
   const onContentSizeChange = useCallback(() => {
