@@ -29,7 +29,9 @@ export const streamChat = async (
         "Lütfen biraz yavaşla. Çok fazla istek attın, biraz bekleyip tekrar dene.",
       );
     }
-    const errorData = (await response.json().catch(() => ({}))) as ChatErrorResponse;
+    const errorData = (await response
+      .json()
+      .catch(() => ({}))) as ChatErrorResponse;
     throw new Error(errorData.error || "Uçuş kulesiyle bağlantı kurulamadı.");
   }
 

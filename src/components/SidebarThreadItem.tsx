@@ -17,7 +17,10 @@ export const SidebarThreadItem = memo(
         style={[styles.threadItem, isActive && styles.activeThreadItem]}
         onPress={() => onPress(id)}
       >
-        <MessageSquare color={isActive ? COLORS.primary : COLORS.text} size={18} />
+        <MessageSquare
+          color={isActive ? COLORS.primary : COLORS.text}
+          size={18}
+        />
         <Text
           style={[styles.threadText, isActive && styles.activeThreadText]}
           numberOfLines={1}

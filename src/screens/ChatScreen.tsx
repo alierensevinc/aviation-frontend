@@ -26,6 +26,7 @@ export const ChatScreen = () => {
 
   const messages = threads.find((t) => t.id === activeThreadId)?.messages || [];
 
+  // @ts-ignore
   const flashListRef = useRef<FlashList<Message>>(null);
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -40,7 +41,8 @@ export const ChatScreen = () => {
 
   const handleSend = useCallback(
     async (customText?: string | any) => {
-      const messageToSend = typeof customText === "string" ? customText : input.trim();
+      const messageToSend =
+        typeof customText === "string" ? customText : input.trim();
       if (!messageToSend || isStreaming) return;
 
       setInput("");
@@ -131,6 +133,7 @@ export const ChatScreen = () => {
               ref={flashListRef}
               data={messages}
               renderItem={renderItem}
+              // @ts-ignore
               estimatedItemSize={100}
               contentContainerStyle={{ paddingBottom: 20 }}
               onContentSizeChange={onContentSizeChange}

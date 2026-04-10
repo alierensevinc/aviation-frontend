@@ -17,8 +17,7 @@ export interface ChatState {
   threads: Thread[];
   activeThreadId: string | null;
   isStreaming: boolean;
-  
-  // Actions
+
   createNewThread: () => void;
   switchThread: (id: string) => void;
   addMessage: (role: "user" | "model", text: string) => void;
@@ -38,7 +37,10 @@ export const useChatStore = create<ChatState>()(
       createNewThread: () => {
         const newId = generateId();
         set((state) => ({
-          threads: [{ id: newId, title: "Yeni Sohbet", messages: [] }, ...state.threads],
+          threads: [
+            { id: newId, title: "Yeni Sohbet", messages: [] },
+            ...state.threads,
+          ],
           activeThreadId: newId,
         }));
       },
@@ -52,20 +54,24 @@ export const useChatStore = create<ChatState>()(
           let currentThreadId = state.activeThreadId;
           let newThreads = [...state.threads];
 
-          // Eğer hiç thread yoksa veya seçili yoksa, bir tane oluştur
           if (!currentThreadId || newThreads.length === 0) {
             currentThreadId = generateId();
-            newThreads = [{ id: currentThreadId, title: "Yeni Sohbet", messages: [] }, ...newThreads];
+            newThreads = [
+              { id: currentThreadId, title: "Yeni Sohbet", messages: [] },
+              ...newThreads,
+            ];
           }
 
-          const threadIndex = newThreads.findIndex((t) => t.id === currentThreadId);
+          const threadIndex = newThreads.findIndex(
+            (t) => t.id === currentThreadId,
+          );
           if (threadIndex !== -1) {
             const thread = newThreads[threadIndex];
-            
-            // İlk kullanıcı mesajıysa başlığı ilk 20 karakter olarak güncelle
+
             let newTitle = thread.title;
             if (thread.messages.length === 0 && role === "user") {
-              newTitle = text.length > 20 ? text.substring(0, 20) + "..." : text;
+              newTitle =
+                text.length > 20 ? text.substring(0, 20) + "..." : text;
             }
 
             newThreads[threadIndex] = {
@@ -82,7 +88,9 @@ export const useChatStore = create<ChatState>()(
         set((state) => {
           if (!state.activeThreadId) return state;
           const newThreads = [...state.threads];
-          const threadIndex = newThreads.findIndex((t) => t.id === state.activeThreadId);
+          const threadIndex = newThreads.findIndex(
+            (t) => t.id === state.activeThreadId,
+          );
           if (threadIndex !== -1) {
             const thread = newThreads[threadIndex];
             const newMessages = [...thread.messages];
@@ -97,8 +105,8 @@ export const useChatStore = create<ChatState>()(
       setStreaming: (status) => set({ isStreaming: status }),
     }),
     {
-      name: 'chat-storage',
+      name: "chat-storage",
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );
