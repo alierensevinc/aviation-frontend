@@ -1,18 +1,28 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Plane } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 
-export const WelcomeView = ({
-  onSuggestionPress,
-}: {
+export interface WelcomeViewProps {
   onSuggestionPress: (text: string) => void;
-}) => {
+}
+
+export const WelcomeView = memo(({ onSuggestionPress }: WelcomeViewProps) => {
   const suggestions = [
     "İstanbul Havalimanı (IST) teknik özellikleri neler?",
     "Sabiha Gökçen'den (SAW) hangi havayolları uçar?",
     "Türkiye'nin en eski havalimanı hangisidir?",
   ];
+
+  const renderSuggestion = useCallback((item: string, index: number) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.suggestionButton}
+      onPress={() => onSuggestionPress(item)}
+    >
+      <Text style={styles.suggestionText}>{item}</Text>
+    </TouchableOpacity>
+  ), [onSuggestionPress]);
 
   return (
     <View style={styles.welcomeContainer}>
@@ -27,19 +37,11 @@ export const WelcomeView = ({
 
       <View style={styles.suggestionWrapper}>
         <Text style={styles.suggestionTitle}>Şunlarla başlayabilirsiniz:</Text>
-        {suggestions.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.suggestionButton}
-            onPress={() => onSuggestionPress(item)}
-          >
-            <Text style={styles.suggestionText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
+        {suggestions.map(renderSuggestion)}
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   welcomeContainer: {

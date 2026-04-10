@@ -1,25 +1,17 @@
-import React, { useState, useRef, useCallback } from "react";
-import {
-  StyleSheet,
-  View,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Text,
-  useWindowDimensions,
-} from "react-native";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { StyleSheet, View, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
-import { Send, Plane, Menu } from "lucide-react-native";
 import { COLORS } from "../theme/colors";
 import { ChatBubble } from "../components/ChatBubble";
 import { SkeletonBubble } from "../components/SkeletonBubble";
 import { WelcomeView } from "../components/WelcomeView";
-import { useChatStore } from "../store/useChatStore";
+import { useChatStore, Message } from "../store/useChatStore";
 import { streamChat } from "../api/chatService";
 import { useNavigation } from "@react-navigation/native";
+import { DrawerNavigationProp } from "@react-navigation/drawer";
+import { ChatHeader } from "../components/ChatHeader";
+import { ChatInputArea } from "../components/ChatInputArea";
 
 export const ChatScreen = () => {
   const [input, setInput] = useState("");
@@ -34,43 +26,89 @@ export const ChatScreen = () => {
 
   const messages = threads.find((t) => t.id === activeThreadId)?.messages || [];
 
-  const flashListRef = useRef<FlashList<any>>(null);
-  const navigation = useNavigation<any>();
+  const flashListRef = useRef<FlashList<Message>>(null);
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const handleSend = async (customText?: string) => {
-    const messageToSend = customText || input.trim();
-    if (!messageToSend || isStreaming) return;
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [activeThreadId]);
 
-    setInput("");
-    addMessage("user", messageToSend);
+  const handleSend = useCallback(
+    async (customText?: string | any) => {
+      const messageToSend = typeof customText === "string" ? customText : input.trim();
+      if (!messageToSend || isStreaming) return;
 
-    setStreaming(true);
-    addMessage("model", "");
+      setInput("");
+      addMessage("user", messageToSend);
 
-    try {
-      // Mesajları güncel haliyle almak için messages dizisini buradan hesaplayalım
-      await streamChat(messageToSend, messages, (fullText) => {
-        updateLastMessage(fullText);
-        flashListRef.current?.scrollToEnd({ animated: true });
-      });
-    } catch (error: any) {
-      updateLastMessage(error.message || "Üzgünüm, bir hata oluştu.");
-    } finally {
-      setStreaming(false);
+      setStreaming(true);
+      addMessage("model", "");
+
+      abortControllerRef.current = new AbortController();
+
+      try {
+        await streamChat(
+          messageToSend,
+          messages,
+          (fullText) => {
+            updateLastMessage(fullText);
+            flashListRef.current?.scrollToEnd({ animated: true });
+          },
+          abortControllerRef.current.signal,
+        );
+      } catch (error: any) {
+        if (
+          error.name === "AbortError" ||
+          error.message?.includes("aborted") ||
+          error.message?.includes("iptal")
+        ) {
+          console.log("İstek kullanıcı tarafından iptal edildi.");
+        } else {
+          updateLastMessage(error.message || "Üzgünüm, bir hata oluştu.");
+        }
+      } finally {
+        setStreaming(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [input, isStreaming, addMessage, setStreaming, messages, updateLastMessage],
+  );
+
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-  };
+    setStreaming(false);
+  }, [setStreaming]);
 
-  const renderItem = useCallback(({ item, index }: any) => {
-    if (
-      item.role === "model" &&
-      item.parts[0].text === "" &&
-      isStreaming &&
-      index === messages.length - 1
-    ) {
-      return <SkeletonBubble />;
-    }
-    return <ChatBubble role={item.role} text={item.parts[0].text} />;
-  }, [isStreaming, messages.length]);
+  const handleMenuPress = useCallback(() => {
+    navigation.openDrawer();
+  }, [navigation]);
+
+  const handleInputChange = useCallback((text: string) => {
+    setInput(text);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: Message; index: number }) => {
+      if (
+        item.role === "model" &&
+        item.parts[0].text === "" &&
+        isStreaming &&
+        index === messages.length - 1
+      ) {
+        return <SkeletonBubble />;
+      }
+      return <ChatBubble role={item.role} text={item.parts[0].text} />;
+    },
+    [isStreaming, messages.length],
+  );
 
   const onContentSizeChange = useCallback(() => {
     flashListRef.current?.scrollToEnd({ animated: true });
@@ -78,24 +116,16 @@ export const ChatScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Menu color={COLORS.white} size={28} />
-        </TouchableOpacity>
-        <Plane color={COLORS.accent} size={28} />
-        <Text style={styles.headerTitle}>SkyGuide TR</Text>
-      </View>
+      <ChatHeader onMenuPress={handleMenuPress} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
-        // iOS'te SafeArea ve header yüksekliğinden kaynaklanan kayma için opsiyonel düzeltme
         keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
         <View style={styles.listContainer}>
           {messages.length === 0 ? (
-            <WelcomeView onSuggestionPress={(text) => handleSend(text)} />
+            <WelcomeView onSuggestionPress={handleSend} />
           ) : (
             <FlashList
               ref={flashListRef}
@@ -104,45 +134,20 @@ export const ChatScreen = () => {
               estimatedItemSize={100}
               contentContainerStyle={{ paddingBottom: 20 }}
               onContentSizeChange={onContentSizeChange}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={5}
             />
           )}
         </View>
 
-        {/* Input Alanı */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder="Havacılık hakkında bir şey sor..."
-            value={input}
-            onChangeText={setInput}
-            multiline
-            maxLength={500}
-            onKeyPress={(e) => {
-              const nativeEvent = e.nativeEvent as any;
-              if (nativeEvent.key === "Enter") {
-                // Sadece Shift tuşuna basılmadığında (Shift+Enter yeni satır yapar) gönder
-                if (!nativeEvent.shiftKey) {
-                  e.preventDefault(); // Web'de alt satıra geçmesini engeller
-                  handleSend();
-                }
-              }
-            }}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!input.trim() || isStreaming) && styles.disabledButton,
-            ]}
-            onPress={() => handleSend()}
-            disabled={!input.trim() || isStreaming}
-          >
-            {isStreaming ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
-            ) : (
-              <Send color={COLORS.white} size={20} />
-            )}
-          </TouchableOpacity>
-        </View>
+        <ChatInputArea
+          input={input}
+          isStreaming={isStreaming}
+          onInputChange={handleInputChange}
+          onSend={handleSend}
+          onStop={handleStop}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -151,44 +156,5 @@ export const ChatScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.primary },
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    height: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.primary,
-    gap: 12,
-  },
-  headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "bold" },
   listContainer: { flex: 1 },
-  inputWrapper: {
-    flexDirection: "row",
-    padding: 12,
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: "#E1E8ED",
-    alignItems: "center",
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    backgroundColor: "#F5F8FA",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.secondary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  disabledButton: { backgroundColor: "#AAB8C2" },
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { View, Animated, StyleSheet } from "react-native";
 import { COLORS } from "../theme/colors";
 
-export const SkeletonBubble = () => {
+export const SkeletonBubble = React.memo(() => {
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export const SkeletonBubble = () => {
       </Animated.View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   aiAlign: {

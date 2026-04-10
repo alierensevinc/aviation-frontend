@@ -13,7 +13,7 @@ export interface Thread {
   messages: Message[];
 }
 
-interface ChatState {
+export interface ChatState {
   threads: Thread[];
   activeThreadId: string | null;
   isStreaming: boolean;
@@ -26,7 +26,7 @@ interface ChatState {
   setStreaming: (status: boolean) => void;
 }
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
+const generateId = (): string => Math.random().toString(36).substring(2, 9);
 
 export const useChatStore = create<ChatState>()(
   persist(

@@ -8,4 +8,6 @@ export const COLORS = {
   aiBubble: "#E9ECEF",
   userBubble: "#003366",
   accent: "#FDBB2D",
-};
+} as const;
+
+export type ColorTheme = typeof COLORS;
